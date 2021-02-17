@@ -32,8 +32,8 @@ webhooks:
     admissionReviewVersions:
       - v1
     rules:
-      - apiGroups: [""]
-        apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE"]
-        resources: ["pods"]
-        scope: "Namespaced"
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations: ["*"]
+        resources: ["*"]
+        scope: "*"

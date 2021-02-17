@@ -29,8 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/aerfio/kyma-webhook-poc/pkg"
-	// +kubebuilder:scaffold:imports
-
 )
 
 type Config struct {
