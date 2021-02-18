@@ -25,7 +25,7 @@ webhooks:
       service:
         name: {{ template "fullname" . }}-webhook
         namespace: "{{ .Release.Namespace }}"
-        path: "/pod-validating"
+        path: "/validating" # TODO template this
     failurePolicy: Ignore
     sideEffects: None
     timeoutSeconds: 5

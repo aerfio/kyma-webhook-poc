@@ -30,3 +30,9 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
   from putting the cluster in a state which cannot be recovered from without completely
   disabling the plugin, ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks are never called
   on admission requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects.
+
+## TODO:
+- pamietac o odpowiednim loggingu
+- pamietac o security (securityContexty etc)
+- sprawdzic co z istio-sidecarem
+

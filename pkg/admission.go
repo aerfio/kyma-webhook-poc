@@ -6,42 +6,49 @@ import (
 	"fmt"
 	"net/http"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-type PodValidator struct {
-	Client  client.Client
-	Decoder *admission.Decoder
+type Validator struct {
+	ServiceAccountDenyList []string
+	NamespaceDenyList      []string // "" means clusterwide
+	Log                    logr.Logger
 }
 
-func (v *PodValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	// pod := &admissionregistrationv1.ValidatingWebhookConfiguration{}
-	//
-	// err := v.Decoder.Decode(req, pod)
-	// if err != nil {
-	// 	return admission.Errored(http.StatusBadRequest, err)
-	// }
-
-	data, err := json.MarshalIndent(req, "", "  ")
-	if err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
+func (v *Validator) Handle(_ context.Context, req admission.Request) admission.Response {
+	if lg := v.Log.V(1); lg.Enabled() {
+		data, err := json.Marshal(req)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		lg.Info(string(data))
 	}
-
-	fmt.Printf("%s\n", string(data))
-
-	if req.UserInfo.Username == "system:serviceaccount:default:test-deny" {
-		return admission.Denied("this sa is always denied")
+	if v.isDeniedNamespace(req.Namespace) && v.isDeniedServiceAccount(req.UserInfo.Username) {
+		scopeErrMsg := fmt.Sprintf("in namespace %s", req.Namespace)
+		if req.Namespace == "" {
+			scopeErrMsg = "in clusterwide scope"
+		}
+		return admission.Denied(fmt.Sprintf("ServiceAccount %s is denied to perform action %s", req.UserInfo.Username, scopeErrMsg))
 	}
-
-	// key := "foo"
-	// label, found := pod.Labels[key]
-	// if !found {
-	// 	return admission.Denied(fmt.Sprintf("missing label %s", key))
-	// }
-	// if label != "bar" {
-	// 	return admission.Denied(fmt.Sprintf("label %s did not have value %q", key, "foo"))
-	// }
 
 	return admission.Allowed("")
+}
+
+func (v Validator) isDeniedServiceAccount(sa string) bool {
+	return contains(v.ServiceAccountDenyList, sa)
+}
+
+func (v Validator) isDeniedNamespace(ns string) bool {
+	return contains(v.NamespaceDenyList, ns)
+}
+
+func contains(slice []string, element string) bool {
+	// yeah, why create such a function in stdlib, who would need it? /s
+	for _, s := range slice {
+		if s == element {
+			return true
+		}
+	}
+	return false
 }
