@@ -18,16 +18,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
-
-	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma/common/logging/logger"
+	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/vrischmann/envconfig"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
-	controller_zap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/aerfio/kyma-webhook-poc/pkg"
@@ -46,6 +46,7 @@ type Config struct {
 
 func main() {
 	setupLog := ctrlzap.New().WithName("setup")
+
 	var cfg Config
 	if err := envconfig.InitWithPrefix(&cfg, "APP"); err != nil {
 		setupLog.Error(err, "unable to parse config")
@@ -54,7 +55,7 @@ func main() {
 
 	setupLoggingOrDie(cfg, setupLog)
 
-	if lg := ctrl.Log.V(0); lg.Enabled() {
+	if lg := ctrl.Log.V(1); lg.Enabled() { // TODO change it to 1
 		marshalledConfig, err := json.Marshal(cfg)
 		if err != nil {
 			setupLog.Error(err, "unable to marshal config to json")
@@ -66,7 +67,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		MetricsBindAddress: cfg.MetricsAddress,
 		Port:               cfg.Port,
-		CertDir:            cfg.CertDir,
+		CertDir:            getCertDir(cfg.CertDir),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -77,17 +78,23 @@ func main() {
 	setupLog.Info("registering webhooks to the webhook server")
 	hookServer.Register(cfg.ValidatingWebhookPath,
 		&webhook.Admission{
-			Handler: &pkg.Validator{
-				Log:                    ctrl.Log.WithName("webhook"),
-				NamespaceDenyList:      cfg.NamespaceDenyList,
-				ServiceAccountDenyList: cfg.ServiceAccountDenyList},
-		})
+			Handler: pkg.NewValidator(ctrl.Log.WithName("webhook"), cfg.NamespaceDenyList, cfg.ServiceAccountDenyList)},
+	)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// getCertDir is a little helper function that facilitates working with Telepresence
+func getCertDir(base string) string {
+	certDir := base
+	if telepresenceRoot := os.Getenv("TELEPRESENCE_ROOT"); telepresenceRoot != "" {
+		certDir = fmt.Sprintf("%s%s", telepresenceRoot, base)
+	}
+	return certDir
 }
 
 func setupLoggingOrDie(cfg Config, setupLog logr.Logger) {
@@ -126,9 +133,9 @@ func setupLoggingOrDie(cfg Config, setupLog logr.Logger) {
 		os.Exit(1)
 	}
 
-	ctrl.SetLogger(controller_zap.New(
-		controller_zap.Level(&logLevelZap),
-		controller_zap.StacktraceLevel(&stackTraceLevelZap),
-		controller_zap.Encoder(encoder),
+	ctrl.SetLogger(ctrlzap.New(
+		ctrlzap.Level(&logLevelZap),
+		ctrlzap.StacktraceLevel(&stackTraceLevelZap),
+		ctrlzap.Encoder(encoder),
 	))
 }

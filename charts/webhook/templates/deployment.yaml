@@ -34,7 +34,7 @@ spec:
       serviceAccountName: {{ template "fullname" . }}-sa
       containers:
         - name: webhook
-          image: "{{ .Values.images.containerRegistry.path }}/webhook:{{ .Values.images.bindingController.version }}"
+          image: "{{ .Values.images.containerRegistry.path }}/webhook:{{ .Values.images.containerRegistry.tag }}"
           ports:
             - containerPort: {{ .Values.config.port }}
           imagePullPolicy: "{{ .Values.images.imagePullPolicy }}"

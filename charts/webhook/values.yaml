@@ -1,15 +1,14 @@
 images:
   containerRegistry:
     path: aerfio
+    tag: v1
   imagePullPolicy: Always
-  bindingController:
-    version: "v1"
 
 config:
   port: 8443
   serviceAccountDenyList: "system:serviceaccount:default:test-deny"
-  namespaceDenyList: "kyma-system,kyma-integration,\"\""
+  namespaceDenyList: kyma-system,kyma-integration,clusterwide
   log:
     level: "info"
-    stacktraceLevel: "fatal"
-    format: "text"
+    stacktraceLevel: "error"
+    format: "json"

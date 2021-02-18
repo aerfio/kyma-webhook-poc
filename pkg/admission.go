@@ -12,8 +12,25 @@ import (
 
 type Validator struct {
 	ServiceAccountDenyList []string
-	NamespaceDenyList      []string    // "" means clusterwide
+	NamespaceDenyList      []string    // to block clusterwide requests add "clusterwide" to that slice
 	Log                    logr.Logger `envconfig:"-"`
+}
+
+func NewValidator(logger logr.Logger, namespaceDenyList, serviceAccountDenyList []string) *Validator {
+	nsList := make([]string, 0, len(namespaceDenyList))
+	for _, ns := range namespaceDenyList {
+		if ns == `""` { // this case is needed to correctly parse clusterwide scope from envconfig
+			nsList = append(nsList, "")
+		} else {
+			nsList = append(nsList, ns)
+		}
+	}
+
+	return &Validator{
+		ServiceAccountDenyList: serviceAccountDenyList,
+		NamespaceDenyList:      nsList,
+		Log:                    logger,
+	}
 }
 
 func (v *Validator) Handle(_ context.Context, req admission.Request) admission.Response {
@@ -25,12 +42,6 @@ func (v *Validator) Handle(_ context.Context, req admission.Request) admission.R
 		lg.Info(string(marshalledReq))
 	}
 
-	fmt.Printf("%s\n", "----------")
-	fmt.Printf("%s\n", req.Namespace)
-	fmt.Printf("%v\n", v.isDeniedNamespace(req.Namespace))
-	fmt.Printf("%s\n", req.UserInfo.Username)
-	fmt.Printf("%v\n", v.isDeniedServiceAccount(req.UserInfo.Username))
-	fmt.Printf("%s\n", "----------")
 	if v.isDeniedNamespace(req.Namespace) && v.isDeniedServiceAccount(req.UserInfo.Username) {
 		scopeErrMsg := fmt.Sprintf("in namespace %s", req.Namespace)
 		if req.Namespace == "" {
@@ -52,9 +63,6 @@ func (v Validator) isDeniedNamespace(ns string) bool {
 
 func contains(slice []string, element string) bool {
 	// yeah, why create such a function in stdlib, who would need it? /s
-	fmt.Printf("%+v\n", slice)
-	fmt.Printf("%q\n", element)
-	fmt.Printf("%s", element)
 	for _, s := range slice {
 		if s == element {
 			return true
