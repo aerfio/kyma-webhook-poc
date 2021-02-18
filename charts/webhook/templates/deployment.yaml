@@ -9,7 +9,7 @@ spec:
   ports:
     - protocol: TCP
       port: 443
-      targetPort: {{ .Values.config.bindingController.port }}
+      targetPort: {{ .Values.config.port }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -36,7 +36,7 @@ spec:
         - name: webhook
           image: "{{ .Values.images.containerRegistry.path }}/webhook:{{ .Values.images.bindingController.version }}"
           ports:
-            - containerPort: {{ .Values.config.bindingController.port }}
+            - containerPort: {{ .Values.config.port }}
           imagePullPolicy: "{{ .Values.images.imagePullPolicy }}"
           volumeMounts:
             - name: webhook-cert
@@ -44,9 +44,17 @@ spec:
               readOnly: true
           env:
             - name: APP_PORT
-              value: "{{ .Values.config.bindingController.port }}"
-            - name: APP_DEBUG_MODE
-              value: "{{ .Values.config.bindingController.debugMode }}"
+              value: "{{ .Values.config.port }}"
+            - name: APP_LOG_LEVEL
+              value: "{{ .Values.config.log.level }}"
+            - name: APP_STACKTRACE_LEVEL
+              value: "{{ .Values.config.log.stacktraceLevel }}"
+            - name: APP_LOG_FORMAT
+              value: "{{ .Values.config.log.format }}"
+            - name: APP_VALIDATOR_SERVICE_ACCOUNT_DENY_LIST
+              value: {{ .Values.config.serviceAccountDenyList }}
+            - name: APP_VALIDATOR_NAMESPACE_DENY_LIST
+              value: {{ .Values.config.namespaceDenyList }}
       volumes:
         - name: webhook-cert
           secret:

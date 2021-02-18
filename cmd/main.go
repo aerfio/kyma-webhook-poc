@@ -20,11 +20,11 @@ import (
 	"encoding/json"
 	"os"
 
+	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
 	"github.com/kyma-project/kyma/common/logging/logger"
 	"github.com/vrischmann/envconfig"
-	"go.uber.org/zap/zapcore"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	controller_zap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -41,10 +41,11 @@ type Config struct {
 	LogLevel              string `envconfig:"default=info"`
 	StackTraceLevel       string `envconfig:"default=warn"`
 	LogFormat             string `envconfig:"default=json"`
+	pkg.Validator
 }
 
 func main() {
-	setupLog := ctrl.Log.WithName("setup")
+	setupLog := ctrlzap.New().WithName("setup")
 	var cfg Config
 	if err := envconfig.InitWithPrefix(&cfg, "APP"); err != nil {
 		setupLog.Error(err, "unable to parse config")
@@ -53,7 +54,7 @@ func main() {
 
 	setupLoggingOrDie(cfg, setupLog)
 
-	if lg := ctrl.Log.V(1); lg.Enabled() {
+	if lg := ctrl.Log.V(0); lg.Enabled() {
 		marshalledConfig, err := json.Marshal(cfg)
 		if err != nil {
 			setupLog.Error(err, "unable to marshal config to json")
@@ -74,7 +75,13 @@ func main() {
 
 	hookServer := mgr.GetWebhookServer()
 	setupLog.Info("registering webhooks to the webhook server")
-	hookServer.Register(cfg.ValidatingWebhookPath, &webhook.Admission{Handler: &pkg.Validator{Log: ctrl.Log.WithName("webhook")}})
+	hookServer.Register(cfg.ValidatingWebhookPath,
+		&webhook.Admission{
+			Handler: &pkg.Validator{
+				Log:                    ctrl.Log.WithName("webhook"),
+				NamespaceDenyList:      cfg.NamespaceDenyList,
+				ServiceAccountDenyList: cfg.ServiceAccountDenyList},
+		})
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
@@ -118,8 +125,6 @@ func setupLoggingOrDie(cfg Config, setupLog logr.Logger) {
 		setupLog.Error(err, "unable to create zap encoder")
 		os.Exit(1)
 	}
-
-logger.New(format, logLevel, )
 
 	ctrl.SetLogger(controller_zap.New(
 		controller_zap.Level(&logLevelZap),
