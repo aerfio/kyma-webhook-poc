@@ -7,7 +7,7 @@ images:
 config:
   port: 8443
   serviceAccountDenyList: "system:serviceaccount:default:test-deny"
-  namespaceDenyList: kyma-system,kyma-integration,clusterwide
+  namespaceDenyList: kyma-system,kyma-integration,"" # "" means clusterwide
   log:
     level: "info"
     stacktraceLevel: "error"

@@ -94,6 +94,7 @@ func getCertDir(base string) string {
 	if telepresenceRoot := os.Getenv("TELEPRESENCE_ROOT"); telepresenceRoot != "" {
 		certDir = fmt.Sprintf("%s%s", telepresenceRoot, base)
 	}
+
 	return certDir
 }
 
