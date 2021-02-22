@@ -1,16 +1,4 @@
-kind: Service
-apiVersion: v1
-metadata:
-  name: {{ template "fullname" . }}-webhook
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    app: {{ template "fullname" . }}-controller
-  ports:
-    - protocol: TCP
-      port: 443
-      targetPort: {{ .Values.config.port }}
----
+{{- $volumeName := "webhook-cert" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,7 +7,9 @@ metadata:
   labels:
     app: {{ template "fullname" . }}-controller
 spec:
-  replicas: 1
+  replicas: {{ .Values.deployment.replicas }} # make it a param and check whether it works
+  #
+  # add podAntiAffinity by label
   selector:
     matchLabels:
       app: {{ template "fullname" . }}-controller
@@ -28,18 +18,29 @@ spec:
       labels:
         app: {{ template "fullname" . }}-controller
       annotations:
-        sidecar.istio.io/inject: "false"
+        sidecar.istio.io/inject: "false" # TODO check this
         checksum/config: {{ include (print $.Template.BasePath "/validating-webhook.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ template "fullname" . }}-sa
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        runAsGroup: 1000
       containers:
         - name: webhook
-          image: "{{ .Values.images.containerRegistry.path }}/webhook:{{ .Values.images.containerRegistry.tag }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          securityContext:
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - containerPort: {{ .Values.config.port }}
-          imagePullPolicy: "{{ .Values.images.imagePullPolicy }}"
           volumeMounts:
-            - name: webhook-cert
+            - name: {{ $volumeName }}
               mountPath: /var/run/webhook
               readOnly: true
           env:
@@ -56,6 +57,6 @@ spec:
             - name: APP_VALIDATOR_NAMESPACE_DENY_LIST
               value: {{ .Values.config.namespaceDenyList }}
       volumes:
-        - name: webhook-cert
+        - name: {{ $volumeName }}
           secret:
             secretName: {{ template "fullname" . }}-webhook-cert

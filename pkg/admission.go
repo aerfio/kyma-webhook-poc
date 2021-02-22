@@ -12,7 +12,7 @@ import (
 
 type Validator struct {
 	ServiceAccountDenyList []string
-	NamespaceDenyList      []string    // to block clusterwide requests add "clusterwide" to that slice
+	NamespaceDenyList      []string // "" means clusterwide
 	Log                    logr.Logger `envconfig:"-"`
 }
 

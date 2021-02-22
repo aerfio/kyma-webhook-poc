@@ -55,7 +55,7 @@ func main() {
 
 	setupLoggingOrDie(cfg, setupLog)
 
-	if lg := ctrl.Log.V(1); lg.Enabled() { // TODO change it to 1
+	if lg := ctrl.Log.V(1); lg.Enabled() {
 		marshalledConfig, err := json.Marshal(cfg)
 		if err != nil {
 			setupLog.Error(err, "unable to marshal config to json")

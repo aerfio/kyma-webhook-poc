@@ -35,4 +35,16 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
 - pamietac o odpowiednim loggingu
 - pamietac o security (securityContexty etc)
 - sprawdzic co z istio-sidecarem
+- production/eval profiles
 
+ogarnac allow/disallow, co lepsze, argumenty za i przeciw
+
+- sa 
+- groupy
+- users
+- failurePolicy: Ignore
+
+- kubectl exec, logs
+- na jakim kubeconfigu instalowana jest kyma (i jak powinnismy to robic)
+
+- co powinno byc na liscie allow

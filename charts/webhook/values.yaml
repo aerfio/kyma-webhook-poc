@@ -1,8 +1,11 @@
-images:
-  containerRegistry:
-    path: aerfio
-    tag: v1
-  imagePullPolicy: Always
+image:
+  registry: docker.io
+  repository: aerfio/webhook
+  tag: v1
+  pullPolicy: Always # TODO: change this to IfNotPresent
+
+deployment:
+  replicas: 1
 
 config:
   port: 8443
