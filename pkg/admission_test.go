@@ -96,10 +96,10 @@ func TestValidator_Handle(t *testing.T) {
 		want   admission.Response
 	}{
 		{
-			name: "sth",
+			name: "should deny action performed by denied sa in denied namespace",
 			fields: fields{
-				ServiceAccountDenyList: []string{"denied-sa"},
-				NamespaceDenyList:      []string{"kyma-system"},
+				ServiceAccountDenyList: []string{"denied-sa", "some-other-sa", "yet-another-sa"},
+				NamespaceDenyList:      []string{"kyma-system", "some-other-namespace"},
 			},
 			args: args{
 				req: admission.Request{
@@ -117,19 +117,105 @@ func TestValidator_Handle(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "should not deny action performed by denied sa in allowed namespace",
+			fields: fields{
+				ServiceAccountDenyList: []string{"denied-sa", "not-denied-sa"},
+				NamespaceDenyList:      []string{"kyma-system", "sth", "doesntmatter"},
+			},
+			args: args{
+				req: admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Namespace: "some-other-namespace",
+						UserInfo: authenticationv1.UserInfo{
+							Username: "denied-sa",
+						},
+					},
+				},
+			},
+			want: admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+				},
+			},
+		},
+		{
+			name: "should not deny action performed by allowed sa in denied namespace",
+			fields: fields{
+				ServiceAccountDenyList: []string{"denied-sa"},
+				NamespaceDenyList:      []string{"kyma-system"},
+			},
+			args: args{
+				req: admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Namespace: "kyma-system",
+						UserInfo: authenticationv1.UserInfo{
+							Username: "allowed-sa",
+						},
+					},
+				},
+			},
+			want: admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+				},
+			},
+		},
+		{
+			name: "should deny action performed by denied sa in clusterscope",
+			fields: fields{
+				ServiceAccountDenyList: []string{"denied-sa"},
+				NamespaceDenyList:      []string{"", "some-namespace"},
+			},
+			args: args{
+				req: admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Namespace: "",
+						UserInfo: authenticationv1.UserInfo{
+							Username: "denied-sa",
+						},
+					},
+				},
+			},
+			want: admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: false,
+				},
+			},
+		},
+		{
+			name:   "should not crash with no sa-list and ns-list",
+			fields: fields{},
+			args: args{
+				req: admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						Namespace: "some-ns",
+						UserInfo: authenticationv1.UserInfo{
+							Username: "some-sa",
+						},
+					},
+				},
+			},
+			want: admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := &Validator{
-				ServiceAccountDenyList: tt.fields.ServiceAccountDenyList,
-				NamespaceDenyList:      tt.fields.NamespaceDenyList,
-				Log:                    logr.DiscardLogger{}, // do not log in tests
-			}
+			v := NewValidator(logr.DiscardLogger{}, tt.fields.NamespaceDenyList, tt.fields.ServiceAccountDenyList)
+
 			got := v.Handle(context.Background(), tt.args.req)
-			// msg := got.Result.Message
-			// assert.Equal(t, msg, "tst")
 
 			assert.Equal(t, got.Allowed, tt.want.Allowed)
+			assert.NotNil(t, got.Result)
+			assert.Nil(t, got.Patches) // this is not a mutating webhook, do not add ANY mutations here
+
+			if !tt.want.Allowed {
+				assert.NotEmpty(t, got.Result.Reason)
+			}
 		})
 	}
 }
