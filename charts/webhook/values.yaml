@@ -6,6 +6,7 @@ image:
 
 deployment:
   replicas: 1
+  priorityClassName: system-cluster-critical
 
 config:
   port: 8443
@@ -15,3 +16,4 @@ config:
     level: "info"
     stacktraceLevel: "error"
     format: "json"
+ 

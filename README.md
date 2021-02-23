@@ -36,6 +36,7 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
 - pamietac o security (securityContexty etc)
 - sprawdzic co z istio-sidecarem
 - production/eval profiles
+- helm chart label
 
 ogarnac allow/disallow, co lepsze, argumenty za i przeciw
 

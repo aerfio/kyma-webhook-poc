@@ -22,15 +22,16 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/validating-webhook.yaml") . | sha256sum }}
     spec:
       serviceAccountName: {{ template "fullname" . }}-sa
-      securityContext:
-        runAsNonRoot: true
-        fsGroup: 1000
-        runAsGroup: 1000
+      {{- with .Values.deployment.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       containers:
         - name: webhook
           image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           securityContext:
+            runAsGroup: 1000
+            runAsNonRoot: true
             privileged: false
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -41,7 +42,7 @@ spec:
             - containerPort: {{ .Values.config.port }}
           volumeMounts:
             - name: {{ $volumeName }}
-              mountPath: /var/run/webhook
+              mountPath: "/var/run/webhook"
               readOnly: true
           env:
             - name: APP_PORT
