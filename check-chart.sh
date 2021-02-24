@@ -53,7 +53,7 @@ then
   wget "https://github.com/instrumenta/kubeval/releases/download/${KUBEVAL_VERSION}/kubeval-${os}-amd64.tar.gz"
   tar xf "${CURRENT_DIR}/kubeval-${os}-amd64.tar.gz" "kubeval"
   mv "${CURRENT_DIR}/kubeval" "${CURRENT_DIR}/bin/kubeval"
-  rm -rf "${CURRENT_DIR}/kubeval-${os}-amd64.tar.gz"
+  rm "${CURRENT_DIR}/kubeval-${os}-amd64.tar.gz"
 fi
 
 # add all helm configurations
