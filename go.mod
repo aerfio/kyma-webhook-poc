@@ -6,6 +6,7 @@ require (
 	github.com/go-logr/logr v0.4.0
 	github.com/kyma-project/kyma/common v0.0.0-20210218133100-6d616069386b
 	github.com/onsi/gomega v1.10.5 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/vrischmann/envconfig v1.3.0
 	golang.org/x/mod v0.4.1 // indirect

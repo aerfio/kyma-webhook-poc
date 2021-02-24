@@ -37,13 +37,17 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
 - sprawdzic co z istio-sidecarem
 - production/eval profiles
 - helm chart label
+- readiness/liveness probes
+- prometheus metrics
+- exempt serviceaccounts from denied namespaces (from iteration review)
+- do not block reading (from iteration review)
+- 
 
 ogarnac allow/disallow, co lepsze, argumenty za i przeciw
 
 - sa 
 - groupy
 - users
-- failurePolicy: Ignore
 
 - kubectl exec, logs
 - na jakim kubeconfigu instalowana jest kyma (i jak powinnismy to robic)

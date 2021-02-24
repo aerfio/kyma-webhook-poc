@@ -6,7 +6,20 @@ image:
 
 deployment:
   replicas: 1
-  priorityClassName: system-cluster-critical
+  resources:
+    requests:
+      cpu: 100m
+      memory: 200Mi
+    limits:
+      cpu: 100m
+      memory: 200Mi
+
+podAntiAffinity:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 80%
 
 config:
   port: 8443
@@ -16,4 +29,7 @@ config:
     level: "info"
     stacktraceLevel: "error"
     format: "json"
- 
+
+priorityClass:
+  enabled: true
+  value: 1000000000 # needs to be lower than "system-cluster-critical" and "system-node-critical"

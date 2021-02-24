@@ -46,7 +46,6 @@ type Config struct {
 
 func main() {
 	setupLog := ctrlzap.New().WithName("setup")
-
 	var cfg Config
 	if err := envconfig.InitWithPrefix(&cfg, "APP"); err != nil {
 		setupLog.Error(err, "unable to parse config")

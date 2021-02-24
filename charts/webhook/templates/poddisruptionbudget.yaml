@@ -1,0 +1,12 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "webhook.name" .}}
+  namespace: {{ .Release.Namespace }}
+spec:
+  minAvailable: 80%
+  selector:
+    matchLabels:
+  {{- include "webhook.selectorLabels" . | nindent 6 }}
+  {{- end }}

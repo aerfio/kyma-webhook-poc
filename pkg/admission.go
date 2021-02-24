@@ -7,12 +7,13 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type Validator struct {
 	ServiceAccountDenyList []string
-	NamespaceDenyList      []string // "" means clusterwide
+	NamespaceDenyList      []string    // "" means clusterwide
 	Log                    logr.Logger `envconfig:"-"`
 }
 
@@ -33,15 +34,22 @@ func NewValidator(logger logr.Logger, namespaceDenyList, serviceAccountDenyList 
 	}
 }
 
-func (v *Validator) Handle(_ context.Context, req admission.Request) admission.Response {
+func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	// figure out whether anything needs to be logged to stdout on info level
+	v.Log.Info("handling request", "serviceaccount", req.UserInfo.Username, "namespace", req.Namespace)
+
 	if lg := v.Log.V(1); lg.Enabled() { // V(1) == debug
 		marshalledReq, err := json.Marshal(req)
 		if err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
+			return admission.Errored(http.StatusBadRequest, errors.Wrapf(err, "while marshalling request from %s", req.UserInfo.Username))
 		}
 		lg.Info(string(marshalledReq))
 	}
 
+	return v.handle(ctx, req)
+}
+
+func (v *Validator) handle(_ context.Context, req admission.Request) admission.Response {
 	if v.isDeniedNamespace(req.Namespace) && v.isDeniedServiceAccount(req.UserInfo.Username) {
 		scopeErrMsg := fmt.Sprintf("in namespace %s", req.Namespace)
 		if req.Namespace == "" {

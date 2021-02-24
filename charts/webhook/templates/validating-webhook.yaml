@@ -1,5 +1,5 @@
-{{- $ca := genCA "service-catalog-webhook-ca" 3650 }}
-{{- $cn := printf "%s-webhook" (include "fullname" .) }}
+{{- $ca := genCA (printf "%s-ca" (include "webhook.svcFullname" .)) 3650 }}
+{{- $cn := include "webhook.svcFullname" . }}
 {{- $altName1 := printf "%s.%s" $cn .Release.Namespace }}
 {{- $altName2 := printf "%s.%s.svc" $cn .Release.Namespace }}
 {{- $cert := genSignedCert $cn nil (list $altName1 $altName2) 3650 $ca }}
@@ -7,7 +7,7 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ template "fullname" . }}-webhook-cert
+  name: {{ template "webhook.name" . }}-cert
   namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
@@ -17,23 +17,24 @@ data:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  name: {{ template "fullname" . }}-validating-webhook
+  name: {{ template "webhook.name" . }}-validating-webhook
 webhooks:
-  - name: validating.pods.kyma-project.io
+  - name: '{{ template "webhook.name" . }}.validating.kyma-project.io'
     clientConfig:
       caBundle: {{ b64enc $ca.Cert }}
       service:
-        name: {{ template "fullname" . }}-webhook
+        name: {{ template "webhook.svcFullname" . }}
         namespace: "{{ .Release.Namespace }}"
-        path: "/validating" # TODO template this
+        path: {{ template "webhook.service.path" . }}
+    # https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#failure-policy
+    # this has to be set to ignore to allow the webhook pod to start
     failurePolicy: Ignore
     sideEffects: None
     timeoutSeconds: 5
-    admissionReviewVersions:
-      - v1
+    admissionReviewVersions: ["v1", "v1beta1"]
     rules:
       - apiGroups: ["*"]
         apiVersions: ["*"]
         operations: ["*"]
-        resources: ["*"]
+        resources: ["*/*"] # "*/*", not "*" https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-rules
         scope: "*"

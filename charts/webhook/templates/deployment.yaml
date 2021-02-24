@@ -2,33 +2,42 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}-controller
+  name: {{ template "webhook.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: {{ template "fullname" . }}-controller
+  {{- include "webhook.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.deployment.replicas }} # make it a param and check whether it works
-  #
-  # add podAntiAffinity by label
+  replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
-      app: {{ template "fullname" . }}-controller
+  {{- include "webhook.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ template "fullname" . }}-controller
+      {{- include "webhook.selectorLabels" . | nindent 8 }}
       annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
         sidecar.istio.io/inject: "false" # TODO check this
         checksum/config: {{ include (print $.Template.BasePath "/validating-webhook.yaml") . | sha256sum }}
     spec:
-      serviceAccountName: {{ template "fullname" . }}-sa
-      {{- with .Values.deployment.priorityClassName }}
-      priorityClassName: {{ . }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                {{- include "webhook.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      serviceAccountName: {{ template "webhook.name" . }}
+      {{- if .Values.priorityClass.enabled }}
+      priorityClassName: {{ template "webhook.name" . }}
       {{- end }}
       containers:
         - name: webhook
           image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          resources: {{- toYaml .Values.deployment.resources | nindent 12 }}
           securityContext:
             runAsGroup: 1000
             runAsNonRoot: true
@@ -49,6 +58,8 @@ spec:
               value: "{{ .Values.config.port }}"
             - name: APP_LOG_LEVEL
               value: "{{ .Values.config.log.level }}"
+            - name: APP_VALIDATING_WEBHOOK_PATH
+              value: {{ template "webhook.service.path" . }}
             - name: APP_STACKTRACE_LEVEL
               value: "{{ .Values.config.log.stacktraceLevel }}"
             - name: APP_LOG_FORMAT
@@ -60,4 +71,4 @@ spec:
       volumes:
         - name: {{ $volumeName }}
           secret:
-            secretName: {{ template "fullname" . }}-webhook-cert
+            secretName: {{ template "webhook.name" . }}-cert

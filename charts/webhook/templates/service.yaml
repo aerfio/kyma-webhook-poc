@@ -1,11 +1,11 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: {{ template "fullname" . }}-webhook
+  name: {{ template "webhook.svcFullname" . }}
   namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: {{ template "fullname" . }}-controller
+  {{- include "webhook.selectorLabels" . | nindent 4 }}
   ports:
     - protocol: TCP
       port: 443
