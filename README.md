@@ -32,11 +32,11 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
   on admission requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects.
 
 ## TODO:
-- pamietac o odpowiednim loggingu
-- pamietac o security (securityContexty etc)
-- sprawdzic co z istio-sidecarem
-- production/eval profiles
-- helm chart label
+- pamietac o odpowiednim loggingu :+1:
+- pamietac o security (securityContexty etc) :+1:
+- sprawdzic co z istio-sidecarem ?
+- production/eval profiles ?
+- helm chart label 
 - readiness/liveness probes
 - prometheus metrics
 - exempt serviceaccounts from denied namespaces (from iteration review)

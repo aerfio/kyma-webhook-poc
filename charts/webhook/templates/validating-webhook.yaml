@@ -9,6 +9,8 @@ kind: Secret
 metadata:
   name: {{ template "webhook.name" . }}-cert
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "webhook.labels" . | nindent 4 }}
 type: Opaque
 data:
   tls.crt: {{ b64enc $cert.Cert }}
@@ -18,6 +20,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: {{ template "webhook.name" . }}-validating-webhook
+  labels:
+  {{- include "webhook.labels" . | nindent 4 }}
 webhooks:
   - name: '{{ template "webhook.name" . }}.validating.kyma-project.io'
     clientConfig:

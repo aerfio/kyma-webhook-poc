@@ -4,9 +4,11 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ template "webhook.name" .}}
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "webhook.labels" . | nindent 4 }}
 spec:
   minAvailable: 80%
   selector:
     matchLabels:
-  {{- include "webhook.selectorLabels" . | nindent 6 }}
+  {{- include "webhook.labels" . | nindent 6 }}
   {{- end }}

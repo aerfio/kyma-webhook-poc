@@ -3,9 +3,11 @@ apiVersion: v1
 metadata:
   name: {{ template "webhook.svcFullname" . }}
   namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "webhook.labels" . | nindent 4 }}
 spec:
   selector:
-  {{- include "webhook.selectorLabels" . | nindent 4 }}
+  {{- include "webhook.labels" . | nindent 4 }}
   ports:
     - protocol: TCP
       port: 443

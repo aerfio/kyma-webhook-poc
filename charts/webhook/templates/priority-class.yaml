@@ -3,6 +3,8 @@ apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
   name: {{ template "webhook.name" . }}
+  labels:
+  {{- include "webhook.labels" . | nindent 4 }}
 value: {{ .Values.priorityClass.value }}
 globalDefault: false
 description: 'This priority class should be used for {{ template "webhook.name" . }} service pods only.'
