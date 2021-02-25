@@ -211,7 +211,10 @@ func TestValidator_Handle(t *testing.T) {
 
 			assert.Equal(t, got.Allowed, tt.want.Allowed)
 			assert.NotNil(t, got.Result)
-			assert.Nil(t, got.Patches) // this is not a mutating webhook, do not add ANY mutations here
+
+			// this is not a mutating webhook, do not add ANY mutations here
+			assert.Nil(t, got.PatchType)
+			assert.Nil(t, got.Patches)
 
 			if !tt.want.Allowed {
 				assert.NotEmpty(t, got.Result.Reason)
