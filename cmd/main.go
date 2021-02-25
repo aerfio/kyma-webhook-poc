@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kyma-project/kyma/common/logging/logger"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/vrischmann/envconfig"
@@ -35,7 +36,8 @@ import (
 
 type Config struct {
 	Port                  int    `envconfig:"default=8443"`
-	MetricsAddress        string `envconfig:"default=:8080"`
+	MetricsPort           int    `envconfig:"default=8080"`
+	ProbePort             int    `envconfig:"default=8081"`
 	CertDir               string `envconfig:"default=/var/run/webhook"`
 	ValidatingWebhookPath string `envconfig:"default=/validating"`
 	LogLevel              string `envconfig:"default=info"`
@@ -64,12 +66,22 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		MetricsBindAddress: cfg.MetricsAddress,
-		Port:               cfg.Port,
-		CertDir:            getCertDir(cfg.CertDir),
+		MetricsBindAddress:     fmt.Sprintf(":%d", cfg.MetricsPort),
+		HealthProbeBindAddress: fmt.Sprintf(":%d", cfg.ProbePort),
+		Port:                   cfg.Port,
+		CertDir:                getCertDir(cfg.CertDir),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 

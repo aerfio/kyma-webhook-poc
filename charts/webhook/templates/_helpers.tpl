@@ -50,6 +50,11 @@ app.kubernetes.io/managed-by: "{{ .Release.Service }}"
 app.kubernetes.io/version: "{{ .Values.image.tag }}"
 {{- end }}
 
+{{- define "webhook.selectorLabels" -}}
+app.kubernetes.io/name: '{{ template "webhook.name" . }}'
+app.kubernetes.io/instance: "{{ .Release.Name }}"
+{{- end }}
+
 {{- define "webhook.service.path" -}}
 {{ print "/validating" | quote }}
 {{- end }}

@@ -36,20 +36,22 @@ kubectl create deployment nginx  --image nginx --as system:serviceaccount:defaul
 - pamietac o security (securityContexty etc) :+1:
 - sprawdzic co z istio-sidecarem ?
 - production/eval profiles ?
-- helm chart label 
 - readiness/liveness probes
 - prometheus metrics
 - exempt serviceaccounts from denied namespaces (from iteration review)
-- do not block reading (from iteration review)
-- 
 
-ogarnac allow/disallow, co lepsze, argumenty za i przeciw
 
-- sa 
-- groupy
-- users
+- serviceacounts -> ok
+- groups/users -> see `gke-user.png`
 
-- kubectl exec, logs
-- na jakim kubeconfigu instalowana jest kyma (i jak powinnismy to robic)
+- kubectl exec -> denied, special verb for that action is CONNECT (see webhooks[].rules.operations)
+  - available verbs are:
+    - CONNECT
+    - CREATE
+    - UPDATE
+    - DELETE
+- kubectl logs -> allowed
+- kubectl get,list,watch -> allowed (- do not block reading (from iteration review))
+  
+- Which kubeconfig is used to install Kyma - Still don't know
 
-- co powinno byc na liscie allow

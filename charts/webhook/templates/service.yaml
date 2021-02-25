@@ -7,8 +7,16 @@ metadata:
   {{- include "webhook.labels" . | nindent 4 }}
 spec:
   selector:
-  {{- include "webhook.labels" . | nindent 4 }}
+  {{- include "webhook.selectorLabels" . | nindent 4 }}
   ports:
     - protocol: TCP
       port: 443
+      name: https
       targetPort: {{ .Values.config.port }}
+    # TODO those two probably shouldn't be exposed
+    - protocol: TCP
+      port: {{ .Values.config.metricsPort }}
+      name: http-metrics
+    - protocol: TCP
+      port: {{ .Values.config.healthProbePort }}
+      name: http-probe

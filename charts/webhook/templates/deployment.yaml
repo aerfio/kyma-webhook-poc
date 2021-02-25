@@ -10,16 +10,19 @@ spec:
   replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
-  {{- include "webhook.labels" . | nindent 6 }}
+  {{- include "webhook.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
       {{- include "webhook.labels" . | nindent 8 }}
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
-        sidecar.istio.io/inject: "false" # TODO check this
+        sidecar.istio.io/inject: "false" # webhook doesn't work with istio sidecar
         checksum/config: {{ include (print $.Template.BasePath "/validating-webhook.yaml") . | sha256sum }}
     spec:
+      # Our webhook should gracefully terminate by lame ducking first, set this to a sufficiently
+      # high value that we respect whatever value it has configured for the lame duck grace period.
+      terminationGracePeriodSeconds: 300
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -49,6 +52,22 @@ spec:
                 - ALL
           ports:
             - containerPort: {{ .Values.config.port }}
+              name: webhook
+            - containerPort: {{ .Values.config.metricsPort }}
+              name: metrics
+            - containerPort: {{ .Values.config.healthProbePort }}
+              name: probes
+          livenessProbe:
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            httpGet:
+              port: {{ .Values.config.healthProbePort }}
+              path: /healthz
+          readinessProbe:
+            timeoutSeconds: 3
+            httpGet:
+              port: {{ .Values.config.healthProbePort }}
+              path: /readyz
           volumeMounts:
             - name: {{ $volumeName }}
               mountPath: "/var/run/webhook"
@@ -56,14 +75,18 @@ spec:
           env:
             - name: APP_PORT
               value: "{{ .Values.config.port }}"
+            - name: APP_METRICS_PORT
+              value: "{{ .Values.config.metricsPort }}"
+            - name: APP_PROBE_PORT
+              value: "{{ .Values.config.healthProbePort }}"
             - name: APP_LOG_LEVEL
               value: "{{ .Values.config.log.level }}"
-            - name: APP_VALIDATING_WEBHOOK_PATH
-              value: {{ template "webhook.service.path" . }}
             - name: APP_STACKTRACE_LEVEL
               value: "{{ .Values.config.log.stacktraceLevel }}"
             - name: APP_LOG_FORMAT
               value: "{{ .Values.config.log.format }}"
+            - name: APP_VALIDATING_WEBHOOK_PATH
+              value: {{ template "webhook.service.path" . }}
             - name: APP_VALIDATOR_SERVICE_ACCOUNT_DENY_LIST
               value: {{ .Values.config.serviceAccountDenyList }}
             - name: APP_VALIDATOR_NAMESPACE_DENY_LIST

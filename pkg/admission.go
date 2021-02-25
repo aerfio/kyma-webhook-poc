@@ -35,9 +35,6 @@ func NewValidator(logger logr.Logger, namespaceDenyList, serviceAccountDenyList 
 }
 
 func (v *Validator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	// figure out whether anything needs to be logged to stdout on info level
-	v.Log.Info("handling request", "serviceaccount", req.UserInfo.Username, "namespace", req.Namespace)
-
 	if lg := v.Log.V(1); lg.Enabled() { // V(1) == debug
 		marshalledReq, err := json.Marshal(req)
 		if err != nil {

@@ -1,7 +1,7 @@
 image:
   registry: docker.io
   repository: aerfio/webhook
-  tag: v1
+  tag: v2
   pullPolicy: Always # TODO: change this to IfNotPresent
 
 deployment:
@@ -23,6 +23,8 @@ podDisruptionBudget:
 
 config:
   port: 8443
+  metricsPort: 8080
+  healthProbePort: 8081
   serviceAccountDenyList: "system:serviceaccount:default:test-deny"
   namespaceDenyList: kyma-system,kyma-integration,"" # "" means clusterwide
   log:
