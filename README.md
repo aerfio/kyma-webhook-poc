@@ -1,7 +1,7 @@
 ## TODO:
 - proper logging - done
 - securityContexts etc - done
-- istio-sidecarem ? - doesn't work, don't know why, all other webhooks we have do not have sidecar
+- istio-sidecar? - for now doesn't work, we might have to add destinationRule or sth else
 - production/eval profiles ? - still not done
 - readiness/liveness probes - done
 - prometheus metrics - provided out of the box, done
@@ -19,7 +19,6 @@
 - kubectl get,list,watch -> allowed (- do not block reading (from iteration review))
   
 - Which kubeconfig is used to install Kyma - Still don't know
-
 
 ```bash
 kubectl -n kyma-system run busybox --image busybox --as=system:serviceaccount:default:test-deny -- sh -c "echo something; sleep 10000"
