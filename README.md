@@ -23,3 +23,5 @@
 ```bash
 kubectl -n kyma-system run busybox --image busybox --as=system:serviceaccount:default:test-deny -- sh -c "echo something; sleep 10000"
 ``` 
+
+Argument against allowlist - we do not have full knowledge about various components that might come preinstalled on a cluster

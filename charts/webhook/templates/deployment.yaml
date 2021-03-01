@@ -87,8 +87,8 @@ spec:
               value: "{{ .Values.config.log.format }}"
             - name: APP_VALIDATING_WEBHOOK_PATH
               value: {{ template "webhook.service.path" . }}
-            - name: APP_VALIDATOR_SERVICE_ACCOUNT_DENY_LIST
-              value: {{ .Values.config.serviceAccountDenyList }}
+            - name: APP_VALIDATOR_SERVICE_ACCOUNT_ALLOW_LIST
+              value: {{ .Values.config.serviceAccountAllowList }}
             - name: APP_VALIDATOR_NAMESPACE_DENY_LIST
               value: {{ .Values.config.namespaceDenyList }}
       volumes:

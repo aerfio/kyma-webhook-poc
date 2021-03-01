@@ -89,7 +89,7 @@ func main() {
 	setupLog.Info("registering webhooks to the webhook server")
 	hookServer.Register(cfg.ValidatingWebhookPath,
 		&webhook.Admission{
-			Handler: pkg.NewValidator(ctrl.Log.WithName("webhook"), cfg.NamespaceDenyList, cfg.ServiceAccountDenyList)},
+			Handler: pkg.NewValidator(ctrl.Log.WithName("webhook"), cfg.NamespaceDenyList, cfg.ServiceAccountAllowList)},
 	)
 
 	setupLog.Info("starting manager")

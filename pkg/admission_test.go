@@ -83,8 +83,8 @@ func TestNewValidator(t *testing.T) {
 
 func TestValidator_Handle(t *testing.T) {
 	type fields struct {
-		ServiceAccountDenyList []string
-		NamespaceDenyList      []string
+		ServiceAcccountAllowList []string
+		NamespaceDenyList        []string
 	}
 	type args struct {
 		req admission.Request
@@ -98,8 +98,8 @@ func TestValidator_Handle(t *testing.T) {
 		{
 			name: "should deny action performed by denied sa in denied namespace",
 			fields: fields{
-				ServiceAccountDenyList: []string{"denied-sa", "some-other-sa", "yet-another-sa"},
-				NamespaceDenyList:      []string{"kyma-system", "some-other-namespace"},
+				ServiceAcccountAllowList: []string{},
+				NamespaceDenyList:        []string{"kyma-system", "some-other-namespace"},
 			},
 			args: args{
 				req: admission.Request{
@@ -118,10 +118,10 @@ func TestValidator_Handle(t *testing.T) {
 			},
 		},
 		{
-			name: "should not deny action performed by denied sa in allowed namespace",
+			name: "should allow action performed by denied sa in allowed namespace",
 			fields: fields{
-				ServiceAccountDenyList: []string{"denied-sa", "not-denied-sa"},
-				NamespaceDenyList:      []string{"kyma-system", "sth", "doesntmatter"},
+				ServiceAcccountAllowList: []string{},
+				NamespaceDenyList:        []string{"kyma-system", "sth", "doesntmatter"},
 			},
 			args: args{
 				req: admission.Request{
@@ -140,10 +140,10 @@ func TestValidator_Handle(t *testing.T) {
 			},
 		},
 		{
-			name: "should not deny action performed by allowed sa in denied namespace",
+			name: "should allow action performed by allowed sa in denied namespace",
 			fields: fields{
-				ServiceAccountDenyList: []string{"denied-sa"},
-				NamespaceDenyList:      []string{"kyma-system"},
+				ServiceAcccountAllowList: []string{"allowed-sa"},
+				NamespaceDenyList:        []string{"kyma-system"},
 			},
 			args: args{
 				req: admission.Request{
@@ -164,8 +164,8 @@ func TestValidator_Handle(t *testing.T) {
 		{
 			name: "should deny action performed by denied sa in clusterscope",
 			fields: fields{
-				ServiceAccountDenyList: []string{"denied-sa"},
-				NamespaceDenyList:      []string{"", "some-namespace"},
+				ServiceAcccountAllowList: []string{},
+				NamespaceDenyList:        []string{"", "some-namespace"},
 			},
 			args: args{
 				req: admission.Request{
@@ -205,7 +205,7 @@ func TestValidator_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := NewValidator(logr.DiscardLogger{}, tt.fields.NamespaceDenyList, tt.fields.ServiceAccountDenyList)
+			v := NewValidator(logr.DiscardLogger{}, tt.fields.NamespaceDenyList, tt.fields.ServiceAcccountAllowList)
 
 			got := v.Handle(context.Background(), tt.args.req)
 
@@ -219,6 +219,75 @@ func TestValidator_Handle(t *testing.T) {
 			if !tt.want.Allowed {
 				assert.NotEmpty(t, got.Result.Reason)
 			}
+		})
+	}
+}
+
+func Test_extractNsFromUsername(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		sa      string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "should deny string with wrong prefix",
+			sa:      "wrong-sa-string",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "should deny wrong sa string, with correct prefix",
+			sa:      "system:serviceaccount:something",
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name:    "should correctly extract namespace",
+			sa:      "system:serviceaccount:kyma-system:test-deny",
+			want:    "kyma-system",
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractNsFromUsername(tt.sa)
+			if tt.wantErr {
+				assert.NotNil(t, err)
+			}
+
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_isUsernameStr(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		want     bool
+	}{
+		{
+			name:     "should return false for uncorrect sa string",
+			username: "test",
+			want:     false,
+		},
+
+		{
+			name:     "should correctly parse correct sa string",
+			username: "system:serviceaccount:default:test-deny",
+			want:     true,
+		},
+		{
+			name:     "should deny group string",
+			username: "logged.via.mail@email.com",
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isUsernameStr(tt.username))
 		})
 	}
 }

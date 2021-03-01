@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -12,9 +13,9 @@ import (
 )
 
 type Validator struct {
-	ServiceAccountDenyList []string
-	NamespaceDenyList      []string    // "" means clusterwide
-	Log                    logr.Logger `envconfig:"-"`
+	ServiceAccountAllowList []string
+	NamespaceDenyList       []string    // "" means clusterwide
+	Log                     logr.Logger `envconfig:"-"`
 }
 
 func NewValidator(logger logr.Logger, namespaceDenyList, serviceAccountDenyList []string) *Validator {
@@ -28,9 +29,9 @@ func NewValidator(logger logr.Logger, namespaceDenyList, serviceAccountDenyList 
 	}
 
 	return &Validator{
-		ServiceAccountDenyList: serviceAccountDenyList,
-		NamespaceDenyList:      nsList,
-		Log:                    logger,
+		ServiceAccountAllowList: serviceAccountDenyList,
+		NamespaceDenyList:       nsList,
+		Log:                     logger,
 	}
 }
 
@@ -47,19 +48,31 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 }
 
 func (v *Validator) handle(_ context.Context, req admission.Request) admission.Response {
-	if v.isDeniedNamespace(req.Namespace) && v.isDeniedServiceAccount(req.UserInfo.Username) {
+	username := req.UserInfo.Username
+	if isUsernameStr(username) {
+		ns, err := extractNsFromUsername(username)
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		if ns == req.Namespace {
+			return admission.Allowed("")
+		}
+	}
+
+	if v.isDeniedNamespace(req.Namespace) && !v.isAllowedServiceAccount(username) {
 		scopeErrMsg := fmt.Sprintf("in namespace %s", req.Namespace)
 		if req.Namespace == "" {
 			scopeErrMsg = "in clusterwide scope"
 		}
-		return admission.Denied(fmt.Sprintf("ServiceAccount %s is denied to perform action %s", req.UserInfo.Username, scopeErrMsg))
+		return admission.Denied(fmt.Sprintf("ServiceAccount %s is denied to perform action %s", username, scopeErrMsg))
 	}
 
 	return admission.Allowed("")
 }
 
-func (v Validator) isDeniedServiceAccount(sa string) bool {
-	return contains(v.ServiceAccountDenyList, sa)
+func (v Validator) isAllowedServiceAccount(sa string) bool {
+	return !contains(v.ServiceAccountAllowList, sa)
 }
 
 func (v Validator) isDeniedNamespace(ns string) bool {
@@ -76,7 +89,21 @@ func contains(slice []string, element string) bool {
 	return false
 }
 
+func isUsernameStr(username string) bool {
+	prefix := "system:serviceaccount:"
+	return strings.HasPrefix(username, prefix) && len(strings.Split(username, ":")) == 4
+}
+
 func extractNsFromUsername(sa string) (string, error) {
-	// todo
-	return sa, nil
+	prefix := "system:serviceaccount:"
+	if !strings.HasPrefix(sa, prefix) {
+		return "", fmt.Errorf("expected %s to be prefixed with %s", sa, prefix)
+	}
+
+	data := strings.Split(strings.TrimPrefix(sa, prefix), ":")
+	if len(data) != 2 {
+		return "", fmt.Errorf("expected %s to have 3 ':' in it", sa)
+	}
+
+	return data[0], nil
 }
