@@ -106,7 +106,7 @@ func TestValidator_Handle(t *testing.T) {
 					AdmissionRequest: admissionv1.AdmissionRequest{
 						Namespace: "kyma-system",
 						UserInfo: authenticationv1.UserInfo{
-							Username: "denied-sa",
+							Username: "system:serviceaccount:default:test-deny",
 						},
 					},
 				},
@@ -128,7 +128,7 @@ func TestValidator_Handle(t *testing.T) {
 					AdmissionRequest: admissionv1.AdmissionRequest{
 						Namespace: "some-other-namespace",
 						UserInfo: authenticationv1.UserInfo{
-							Username: "denied-sa",
+							Username: "system:serviceaccount:default:denied-sa",
 						},
 					},
 				},
@@ -142,7 +142,7 @@ func TestValidator_Handle(t *testing.T) {
 		{
 			name: "should allow action performed by allowed sa in denied namespace",
 			fields: fields{
-				ServiceAcccountAllowList: []string{"allowed-sa"},
+				ServiceAcccountAllowList: []string{"system:serviceaccount:default:allowed-sa"},
 				NamespaceDenyList:        []string{"kyma-system"},
 			},
 			args: args{
@@ -150,7 +150,7 @@ func TestValidator_Handle(t *testing.T) {
 					AdmissionRequest: admissionv1.AdmissionRequest{
 						Namespace: "kyma-system",
 						UserInfo: authenticationv1.UserInfo{
-							Username: "allowed-sa",
+							Username: "system:serviceaccount:default:allowed-sa",
 						},
 					},
 				},
@@ -172,7 +172,7 @@ func TestValidator_Handle(t *testing.T) {
 					AdmissionRequest: admissionv1.AdmissionRequest{
 						Namespace: "",
 						UserInfo: authenticationv1.UserInfo{
-							Username: "denied-sa",
+							Username: "system:serviceaccount:default:test-deny",
 						},
 					},
 				},
@@ -191,7 +191,7 @@ func TestValidator_Handle(t *testing.T) {
 					AdmissionRequest: admissionv1.AdmissionRequest{
 						Namespace: "some-ns",
 						UserInfo: authenticationv1.UserInfo{
-							Username: "some-sa",
+							Username: "system:serviceaccount:default:allowed-sa",
 						},
 					},
 				},
@@ -209,7 +209,7 @@ func TestValidator_Handle(t *testing.T) {
 
 			got := v.Handle(context.Background(), tt.args.req)
 
-			assert.Equal(t, got.Allowed, tt.want.Allowed)
+			assert.Equal(t, tt.want.Allowed, got.Allowed)
 			assert.NotNil(t, got.Result)
 
 			// this is not a mutating webhook, do not add ANY mutations here
@@ -262,7 +262,7 @@ func Test_extractNsFromUsername(t *testing.T) {
 	}
 }
 
-func Test_isUsernameStr(t *testing.T) {
+func Test_usernameIsServiceAccount(t *testing.T) {
 	tests := []struct {
 		name     string
 		username string
@@ -287,7 +287,7 @@ func Test_isUsernameStr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isUsernameStr(tt.username))
+			assert.Equal(t, tt.want, usernameIsServiceAccount(tt.username))
 		})
 	}
 }

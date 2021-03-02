@@ -49,18 +49,21 @@ func (v *Validator) Handle(ctx context.Context, req admission.Request) admission
 
 func (v *Validator) handle(_ context.Context, req admission.Request) admission.Response {
 	username := req.UserInfo.Username
-	if isUsernameStr(username) {
+
+	// this part needs to be tested
+	if usernameIsServiceAccount(username) {
 		ns, err := extractNsFromUsername(username)
 		if err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 
 		if ns == req.Namespace {
-			return admission.Allowed("")
+			return admission.Allowed("Existing ServiceAccounts are allowed to perform in their namespaces")
 		}
 	}
+	// this part needs to be tested
 
-	if v.isDeniedNamespace(req.Namespace) && !v.isAllowedServiceAccount(username) {
+	if v.isDeniedNamespace(req.Namespace) && usernameIsServiceAccount(username) && !v.isAllowedServiceAccount(username) {
 		scopeErrMsg := fmt.Sprintf("in namespace %s", req.Namespace)
 		if req.Namespace == "" {
 			scopeErrMsg = "in clusterwide scope"
@@ -72,7 +75,7 @@ func (v *Validator) handle(_ context.Context, req admission.Request) admission.R
 }
 
 func (v Validator) isAllowedServiceAccount(sa string) bool {
-	return !contains(v.ServiceAccountAllowList, sa)
+	return contains(v.ServiceAccountAllowList, sa)
 }
 
 func (v Validator) isDeniedNamespace(ns string) bool {
@@ -89,7 +92,7 @@ func contains(slice []string, element string) bool {
 	return false
 }
 
-func isUsernameStr(username string) bool {
+func usernameIsServiceAccount(username string) bool {
 	prefix := "system:serviceaccount:"
 	return strings.HasPrefix(username, prefix) && len(strings.Split(username, ":")) == 4
 }

@@ -28,7 +28,7 @@ config:
   serviceAccountAllowList: "system:serviceaccount:default:test-allow"
   namespaceDenyList: kyma-system,kyma-integration,"" # "" means clusterwide
   log:
-    level: "info"
+    level: "debug"
     stacktraceLevel: "error"
     format: "json"
 
